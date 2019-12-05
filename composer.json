@@ -1,0 +1,12 @@
+{
+    "name": "justin/image-optimizer",
+    "authors": [
+        {
+            "name": "Justin Fortunato",
+            "email": "jfortunato25@gmail.com"
+        }
+    ],
+    "require": {
+        "beberlei/assert": "^3.2"
+    }
+}
