@@ -12,13 +12,15 @@ echo "" . PHP_EOL;
 echo "" . PHP_EOL;
 echo "" . PHP_EOL;
 
+$nodeModulesBin = __DIR__ . '/node_modules/.bin';
+
 try {
     \Assert\Assertion::count($argv, 3);
 
     // assert that the system has all required shell commands
-    \Assert\Assertion::notEmpty(trim(shell_exec('which npm')));
-    \Assert\Assertion::notEmpty(trim(shell_exec('which imagemin')));
-    \Assert\Assertion::notEmpty(trim(shell_exec('npm list -g | grep imagemin-mozjpeg')));
+    \Assert\Assertion::notEmpty(trim(shell_exec('which npm')), "Please install npm");
+    \Assert\Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/imagemin")), "Please run npm install.");
+    \Assert\Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/mozjpeg")), "Please run npm install.");
 
     $inputDirectory = realpath(rtrim($argv[1], '/'));
     $outputDirectory = realpath(rtrim($argv[2], '/'));
@@ -65,7 +67,7 @@ function optimizeImage($rawImage, $outputDirectory) {
 
     $filename = $directory . '/' . $pathinfo['basename'];
 
-    shell_exec("imagemin --plugin=mozjpeg --plugin=optipng --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
+    shell_exec("./node_modules/.bin/imagemin --plugin=mozjpeg --plugin=optipng --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
 }
 
 // We want a mapping of every image to its last modified time. We will then do the same with the
@@ -73,6 +75,8 @@ function optimizeImage($rawImage, $outputDirectory) {
 // directory in sync with the raw images
 $rawImages = mapImagesInDirectoryWithLastModifiedTime($inputDirectory);
 $optimizedImages = mapImagesInDirectoryWithLastModifiedTime($outputDirectory, $outputDirectory);
+
+// TODO get total file size of all raw images, and ensure the system has at least enough disk space for that amount plus some padding
 
 // 1) optimize new raw images
 // 2) optimize already optimized images whose raw counterpart has been modified
