@@ -20,8 +20,8 @@ try {
     \Assert\Assertion::notEmpty(trim(shell_exec('which imagemin')));
     \Assert\Assertion::notEmpty(trim(shell_exec('npm list -g | grep imagemin-mozjpeg')));
 
-    $inputDirectory = rtrim($argv[1], '/');
-    $outputDirectory = rtrim($argv[2], '/');
+    $inputDirectory = realpath(rtrim($argv[1], '/'));
+    $outputDirectory = realpath(rtrim($argv[2], '/'));
 
     \Assert\Assertion::directory($inputDirectory, 'Please make sure the input directory exists before running this script.');
     \Assert\Assertion::directory($outputDirectory, 'Please make sure the output directory exists before running this script.');
@@ -65,8 +65,7 @@ function optimizeImage($rawImage, $outputDirectory) {
 
     $filename = $directory . '/' . $pathinfo['basename'];
 
-//    shell_exec("imagemin --plugin=mozjpeg --plugin=optipng --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
-    shell_exec("imagemin '$rawImage' > '$filename'");
+    shell_exec("imagemin --plugin=mozjpeg --plugin=optipng --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
 }
 
 // We want a mapping of every image to its last modified time. We will then do the same with the
