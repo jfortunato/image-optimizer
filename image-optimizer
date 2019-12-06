@@ -100,10 +100,10 @@ foreach ($rawImages as $rawImage => $mtime) {
 // 3) delete any optimized images that no longer exist as raw images
 foreach ($optimizedImages as $optimizedImage => $mtime) {
     if (!array_key_exists($optimizedImage, $rawImages)) {
-        echo "Removing optimized image that no longer exists: $optimizedImage" . PHP_EOL;
-
         // don't forget to prefix the output directory
         $optimizedImage = $outputDirectory . $optimizedImage;
+
+        echo "Removing optimized image that no longer exists: $optimizedImage" . PHP_EOL;
 
         unlink($optimizedImage);
     }
