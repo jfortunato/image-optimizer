@@ -45,8 +45,9 @@ final class OptimizeImages extends Command
         // We want a mapping of every image to its last modified time. We will then do the same with the
         // already optimized directory (if it exists) and compare them so that we can keep the optimized
         // directory in sync with the raw images
-        $rawImages = $this->mapImagesInDirectoryWithLastModifiedTime($inputDirectory);
-        $optimizedImages = $this->mapImagesInDirectoryWithLastModifiedTime($outputDirectory, $outputDirectory);
+        $onlyInclude = $input->getOption('only-include');
+        $rawImages = $this->mapImagesInDirectoryWithLastModifiedTime($inputDirectory, $onlyInclude);
+        $optimizedImages = $this->mapImagesInDirectoryWithLastModifiedTime($outputDirectory, $onlyInclude, $outputDirectory);
 
         // TODO get total file size of all raw images, and ensure the system has at least enough disk space for that amount plus some padding
 
@@ -88,10 +89,11 @@ final class OptimizeImages extends Command
 
     /**
      * @param string $directory
+     * @param array $onlyInclude
      * @param string|null $excludePrefix
      * @return array
      */
-    private function mapImagesInDirectoryWithLastModifiedTime(string $directory, string $excludePrefix = null): array
+    private function mapImagesInDirectoryWithLastModifiedTime(string $directory, array $onlyInclude = [], string $excludePrefix = null): array
     {
         $images = explode(PHP_EOL, trim(shell_exec("find $directory -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$'")));
 
@@ -101,6 +103,22 @@ final class OptimizeImages extends Command
         $map = [];
 
         foreach ($images as $image) {
+            // if the user specified to only include certain files, don't include any filepath
+            // that does not contain the search string
+            if (!empty($onlyInclude)) {
+                $found = false;
+
+                foreach ($onlyInclude as $item) {
+                    if (strpos($image, $item) !== false) {
+                        $found = true;
+                    }
+                }
+
+                if (!$found) {
+                    continue;
+                }
+            }
+
             // make sure we get the mtime before stripping off a prefix
             $mtime = trim(shell_exec("stat -c %Y '$image'"));
 

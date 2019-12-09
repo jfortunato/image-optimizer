@@ -4,6 +4,7 @@
 use Jfortunato\ImageOptimizer\OptimizeImages;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 // set to run indefinitely if needed
 set_time_limit(0);
@@ -14,6 +15,7 @@ require_once __DIR__ . '/vendor/autoload.php';
     ->register('optimize-images')
     ->addArgument('input-directory', InputArgument::REQUIRED, "The input directory with unoptimized images.")
     ->addArgument('output-directory', InputArgument::REQUIRED, "The output directory where the optimized images will go.")
+    ->addOption("only-include", null,  InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, "Only include images who have a filepath containing the specified string.")
     ->setCode(new OptimizeImages)
     ->getApplication()
     ->setDefaultCommand('optimize-images', true) // Single command application
