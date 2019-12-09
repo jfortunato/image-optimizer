@@ -73,3 +73,18 @@ RewriteCond ${optimized_images_path}%1.%2 -f
 RewriteRule ^(.+)$ ${optimized_images_alias}%1.%2 [L]
 </IfModule>
 ```
+
+### Advanced Usage
+##### Use the ```--no-delete``` option to keep optimized images that don't exist in the input/ directory.
+
+###### optimize all images under input-directory/, but if an optimized image exists under optimized-images/ and not under input-directory/, do not delete it.
+```
+./image-optimizer --no-delete input-directory/ /path/to/optimized-images/
+```
+
+##### Use the ```--only-include="path/to/match"``` option to filter down the input/ directory images and only include those within certain sub-directories.
+
+###### only include files whose absolute filepath contain the string "wp-content/uploads/2018" or "wp-content/uploads/2019"
+```
+./image-optimizer --only-include="wp-content/uploads/2018" --only-include="wp-content/uploads/2019" input-directory/ /path/to/optimized-images/
+```
