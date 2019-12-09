@@ -38,7 +38,7 @@ The script takes 2 arguments, the input/ directory and the output/ directory. De
 ```
 
 ### Automatically mirroring the un-optimized images
-The script is setup to mirror the input directory with the output directory. So if you re-run the script with the exact same arguments, any new or modified images will be found and optimized. Also, any delete images (from the input directory), will also be deleted from the output directory. You could run this script on a cron to automate this process.
+The script is setup to mirror the input directory with the output directory. So if you re-run the script with the exact same arguments, any new or modified images will be found and optimized. Also, any deleted images (from the input directory), will also be deleted from the output directory. You could run this script on a cron to automate this process.
 ```
 @daily /path/to/image-optimizer input-directory/ /path/to/optimized-images/ > /dev/null 2>&1
 ```
