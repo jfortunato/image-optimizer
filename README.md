@@ -1,14 +1,14 @@
 # Image Optimizer
-Optimize an entire directory of images and track the directory for any changes.
+Optimize an entire directory of images and track the directory for changes.
 
 ### Requirements
-- PHP 7 or later
+- PHP 7.3 or later
 - LINUX server
 - composer installed
 - npm installed
 
 
-### Prerequisites
+### Installation
 Clone the repo and navigate into it.
 ```
 git clone https://github.com/jfortunato/image-optimizer.git
@@ -27,7 +27,7 @@ npm install
 
 Ensure the directory that will store the optimized images exists.
 ```
-mkdir optimized-images
+mkdir /path/to/optimized-images
 ```
 
 ### Basic Usage
