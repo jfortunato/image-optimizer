@@ -71,14 +71,16 @@ final class OptimizeImages extends Command
         }
 
         // 3) delete any optimized images that no longer exist as raw images
-        foreach ($optimizedImages as $optimizedImage => $mtime) {
-            if (!array_key_exists($optimizedImage, $rawImages)) {
-                // don't forget to prefix the output directory
-                $optimizedImage = $outputDirectory . $optimizedImage;
+        if ($input->getOption('no-delete') === false) {
+            foreach ($optimizedImages as $optimizedImage => $mtime) {
+                if (!array_key_exists($optimizedImage, $rawImages)) {
+                    // don't forget to prefix the output directory
+                    $optimizedImage = $outputDirectory . $optimizedImage;
 
-                $output->writeln("Removing optimized image that no longer exists: $optimizedImage");
+                    $output->writeln("Removing optimized image that no longer exists: $optimizedImage");
 
-                unlink($optimizedImage);
+                    unlink($optimizedImage);
+                }
             }
         }
 

@@ -16,6 +16,7 @@ require_once __DIR__ . '/vendor/autoload.php';
     ->addArgument('input-directory', InputArgument::REQUIRED, "The input directory with unoptimized images.")
     ->addArgument('output-directory', InputArgument::REQUIRED, "The output directory where the optimized images will go.")
     ->addOption("only-include", null,  InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, "Only include images who have a filepath containing the specified string.")
+    ->addOption("no-delete", null,  InputOption::VALUE_NONE, "Don't delete any optimized images that no longer exist in the input directory.")
     ->setCode(new OptimizeImages)
     ->getApplication()
     ->setDefaultCommand('optimize-images', true) // Single command application
