@@ -21,6 +21,7 @@ try {
     \Assert\Assertion::notEmpty(trim(shell_exec('which npm')), "Please install npm");
     \Assert\Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/imagemin")), "Please run npm install.");
     \Assert\Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/mozjpeg")), "Please run npm install.");
+    \Assert\Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/pngquant")), "Please run npm install.");
 
     $inputDirectory = realpath(rtrim($argv[1], '/'));
     $outputDirectory = realpath(rtrim($argv[2], '/'));
@@ -67,7 +68,7 @@ function optimizeImage($rawImage, $outputDirectory) {
 
     $filename = $directory . '/' . $pathinfo['basename'];
 
-    shell_exec("./node_modules/.bin/imagemin --plugin=mozjpeg --plugin=optipng --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
+    shell_exec("./node_modules/.bin/imagemin --plugin=mozjpeg --plugin=pngquant --plugin=gifsicle --plugin=svgo '$rawImage' > '$filename'");
 }
 
 // We want a mapping of every image to its last modified time. We will then do the same with the

@@ -18,6 +18,7 @@
   "homepage": "https://github.com/jfortunato/image-optimizer#readme",
   "dependencies": {
     "imagemin-cli": "^5.0.0",
-    "imagemin-mozjpeg": "^8.0.0"
+    "imagemin-mozjpeg": "^8.0.0",
+    "imagemin-pngquant": "^8.0.0"
   }
 }
