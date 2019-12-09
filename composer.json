@@ -6,7 +6,13 @@
             "email": "jfortunato25@gmail.com"
         }
     ],
+    "autoload": {
+        "psr-4": {
+            "Jfortunato\\ImageOptimizer\\": "src/"
+        }
+    },
     "require": {
-        "beberlei/assert": "^3.2"
+        "beberlei/assert": "^3.2",
+        "symfony/console": "^5.0"
     }
 }
