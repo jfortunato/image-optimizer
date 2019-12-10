@@ -4,7 +4,9 @@
 use Jfortunato\ImageOptimizer\OptimizeImages;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 
 // set to run indefinitely if needed
 set_time_limit(0);
@@ -18,7 +20,13 @@ require_once __DIR__ . '/vendor/autoload.php';
     ->addOption("only-include", null,  InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, "Only include images who have a filepath containing the specified string.")
     ->addOption("no-delete", null,  InputOption::VALUE_NONE, "Don't delete any optimized images that no longer exist in the input directory.")
     ->addOption("yes", 'y',  InputOption::VALUE_NONE, "Automatically proceed without prompting.")
-    ->setCode(new OptimizeImages)
+    ->setCode(function (InputInterface $input, OutputInterface $output) {
+        try {
+            (new OptimizeImages($input->getArgument('input-directory'), $input->getArgument('output-directory')))($input, $output);
+        } catch (\Assert\AssertionFailedException $e) {
+            return $output->writeln($e->getMessage());
+        }
+    })
     ->getApplication()
     ->setDefaultCommand('optimize-images', true) // Single command application
     ->run();

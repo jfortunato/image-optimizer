@@ -18,7 +18,31 @@ final class OptimizeImages extends Command
     /**
      * @var string
      */
-    private $outputDirectory = '';
+    private $inputDirectory;
+    /**
+     * @var string
+     */
+    private $outputDirectory;
+
+    /**
+     * @param string $inputDirectory
+     * @param string $outputDirectory
+     * @throws AssertionFailedException
+     */
+    public function __construct(string $inputDirectory, string $outputDirectory)
+    {
+        $this->inputDirectory = realpath(rtrim($inputDirectory, '/'));
+        $this->outputDirectory = realpath(rtrim($outputDirectory, '/'));
+
+        Assertion::directory($this->inputDirectory, 'Please make sure the input directory exists before running this script.');
+        Assertion::directory($this->outputDirectory, 'Please make sure the output directory exists before running this script.');
+        // assert that the system has all required shell commands
+        $nodeModulesBin = self::NODE_MODULES_BIN;
+        Assertion::notEmpty(trim(shell_exec('which npm')), "Please install npm");
+        Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/imagemin")), "Please run npm install.");
+        Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/mozjpeg")), "Please run npm install.");
+        Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/pngquant")), "Please run npm install.");
+    }
 
     /**
      * @param InputInterface $input
@@ -33,30 +57,12 @@ final class OptimizeImages extends Command
         // create some whitespace
         $this->createWhitespace($output);
 
-        try {
-            // assert that the system has all required shell commands
-            $nodeModulesBin = self::NODE_MODULES_BIN;
-            Assertion::notEmpty(trim(shell_exec('which npm')), "Please install npm");
-            Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/imagemin")), "Please run npm install.");
-            Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/mozjpeg")), "Please run npm install.");
-            Assertion::notEmpty(trim(shell_exec("which $nodeModulesBin/pngquant")), "Please run npm install.");
-
-            $inputDirectory = realpath(rtrim($input->getArgument('input-directory'), '/'));
-            $outputDirectory = realpath(rtrim($input->getArgument('output-directory'), '/'));
-            $this->outputDirectory = $outputDirectory;
-
-            Assertion::directory($inputDirectory, 'Please make sure the input directory exists before running this script.');
-            Assertion::directory($outputDirectory, 'Please make sure the output directory exists before running this script.');
-        } catch (\Exception $e) {
-            return $output->writeln($e->getMessage());
-        }
-
         // We want a mapping of every image to its last modified time. We will then do the same with the
         // already optimized directory (if it exists) and compare them so that we can keep the optimized
         // directory in sync with the raw images
         $onlyInclude = $input->getOption('only-include');
-        $rawImages = $this->mapImagesInDirectory($inputDirectory, $onlyInclude);
-        $optimizedImages = $this->mapImagesInDirectory($outputDirectory, $onlyInclude, true);
+        $rawImages = $this->mapImagesInDirectory($this->inputDirectory, $onlyInclude);
+        $optimizedImages = $this->mapImagesInDirectory($this->outputDirectory, $onlyInclude, true);
 
         // TODO get total file size of all raw images, and ensure the system has at least enough disk space for that amount plus some padding
 
@@ -122,7 +128,7 @@ final class OptimizeImages extends Command
 
             $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
 
-            $directory = $outputDirectory . $pathInfo['dirname'];
+            $directory = $this->outputDirectory . $pathInfo['dirname'];
 
             if (!file_exists($directory)) {
                 mkdir($directory, 0777, true);
