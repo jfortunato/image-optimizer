@@ -16,6 +16,11 @@ final class OptimizeImages extends Command
     const NODE_MODULES_BIN = __DIR__ . '/../node_modules/.bin';
 
     /**
+     * @var string
+     */
+    private $outputDirectory = '';
+
+    /**
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return void
@@ -38,6 +43,7 @@ final class OptimizeImages extends Command
 
             $inputDirectory = realpath(rtrim($input->getArgument('input-directory'), '/'));
             $outputDirectory = realpath(rtrim($input->getArgument('output-directory'), '/'));
+            $this->outputDirectory = $outputDirectory;
 
             Assertion::directory($inputDirectory, 'Please make sure the input directory exists before running this script.');
             Assertion::directory($outputDirectory, 'Please make sure the output directory exists before running this script.');
@@ -50,28 +56,28 @@ final class OptimizeImages extends Command
         // directory in sync with the raw images
         $onlyInclude = $input->getOption('only-include');
         $rawImages = $this->mapImagesInDirectory($inputDirectory, $onlyInclude);
-        $optimizedImages = $this->mapImagesInDirectory($outputDirectory, $onlyInclude, $outputDirectory);
+        $optimizedImages = $this->mapImagesInDirectory($outputDirectory, $onlyInclude, true);
 
         // TODO get total file size of all raw images, and ensure the system has at least enough disk space for that amount plus some padding
 
 
         // 1) optimize new raw images
         $newImages = array_filter($rawImages, function (array $rawImageInfo) use ($optimizedImages) {
-            return !array_key_exists($rawImageInfo['filepath_hash'], $optimizedImages);
+            return !array_key_exists($rawImageInfo['source_filepath_hash'], $optimizedImages);
         });
         // 2) optimize already optimized images whose raw counterpart has been modified
         $modifiedImages = array_filter($rawImages, function (array $rawImageInfo) use ($optimizedImages) {
-            if (!array_key_exists($rawImageInfo['filepath_hash'], $optimizedImages)) {
+            if (!array_key_exists($rawImageInfo['source_filepath_hash'], $optimizedImages)) {
                 return false;
             }
 
-            $optimizedImageMTime = $optimizedImages[$rawImageInfo['filepath_hash']]['mtime'];
+            $optimizedImageMTime = $optimizedImages[$rawImageInfo['source_filepath_hash']]['mtime'];
 
             return (int) $optimizedImageMTime < (int) $rawImageInfo['mtime'];
         });
         // 3) delete any optimized images that no longer exist as raw images
         $deletedImages = array_filter($optimizedImages, function (array $optimizedImageInfo) use ($rawImages) {
-            return !array_key_exists($optimizedImageInfo['filepath_hash'], $rawImages);
+            return !array_key_exists($optimizedImageInfo['source_filepath_hash'], $rawImages);
         });
 
         $output->writeln(sprintf("<info>Need to optimize %s new images.</info>", count($newImages)));
@@ -100,7 +106,7 @@ final class OptimizeImages extends Command
         mkdir($dir);
 
         foreach ($imagesToOptimize as $imageInfo) {
-            $tempPath = $dir . '/' . $imageInfo['filepath_hash'] . '.' . $imageInfo['extension'];
+            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $imageInfo['extension'];
 
             copy($imageInfo['filepath'], $tempPath);
         }
@@ -110,7 +116,7 @@ final class OptimizeImages extends Command
 
         // now that all the images are optimized, we need to restore their original directory structure/filename and place them in the output directory
         foreach ($imagesToOptimize as $imageInfo) {
-            $tempPath = $dir . '/' . $imageInfo['filepath_hash'] . '.' . $imageInfo['extension'];
+            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $imageInfo['extension'];
 
             $directory = $outputDirectory . $imageInfo['dirname'];
 
@@ -129,10 +135,12 @@ final class OptimizeImages extends Command
         if ($input->getOption('no-delete') === false) {
             foreach ($deletedImages as $deletedImageInfo) {
                 // don't forget to prefix the output directory
-                $optimizedImage = $outputDirectory . $deletedImageInfo['filepath'];
+                $optimizedImage = $deletedImageInfo['filepath'];
 
                 $output->writeln("<comment>Removing optimized image that no longer exists: $optimizedImage</comment>");
 
+                // ensure we don't accidentally remove anything outside the output directory
+                Assertion::contains($optimizedImage, $this->outputDirectory);
                 unlink($optimizedImage);
             }
         }
@@ -145,21 +153,43 @@ final class OptimizeImages extends Command
     /**
      * @param string $directory
      * @param array $onlyInclude
-     * @param string|null $excludePrefix
+     * @param bool $isOutputDirectory
      * @return array
      */
-    private function mapImagesInDirectory(string $directory, array $onlyInclude = [], string $excludePrefix = null): array
+    private function mapImagesInDirectory(string $directory, array $onlyInclude = [], bool $isOutputDirectory = false): array
     {
-        $images = explode(PHP_EOL, trim(shell_exec("find $directory -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$'")));
+        $result = explode(PHP_EOL, trim(shell_exec("find $directory -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$' -exec ls -l --time-style=+%s {} +")));
 
         // remove empty string on initial run
-        $images = array_filter($images);
+        $result = array_filter($result);
 
-        $images = array_filter($images, function (string $image) use ($onlyInclude) {
-            // remove empty string on initial run
-            if (empty($image)) {
-                return false;
+        $images = array_map(function (string  $fileInfo) use ($isOutputDirectory) {
+            // replace multiple spaces with one space
+            $fileInfo = preg_replace('/\s\s+/', ' ', $fileInfo);
+
+            $parts = explode(' ', $fileInfo);
+
+            $filepath = $parts[6];
+
+            $hash = md5($filepath);
+
+            // if this file in inside the output directory, we need to get the source hash
+            // by excluding the leading output directory string
+            if ($isOutputDirectory) {
+                $regex = preg_quote($this->outputDirectory, '/');
+
+                $hash = md5(preg_replace("/^$regex/", '', $filepath));
             }
+
+            return array_merge([
+                'source_filepath_hash' => $hash,
+                'filepath' => $filepath,
+                'filesize' => $parts[4],
+                'mtime' => $parts[5],
+            ], pathinfo($filepath));
+        }, $result);
+
+        $images = array_filter($images, function (array $imageInfo) use ($onlyInclude) {
 
             // if the user specified to only include certain files, don't include any filepath
             // that does not contain the search string
@@ -167,7 +197,7 @@ final class OptimizeImages extends Command
                 $found = false;
 
                 foreach ($onlyInclude as $item) {
-                    if (strpos($image, $item) !== false) {
+                    if (strpos($imageInfo['filepath'], $item) !== false) {
                         $found = true;
                     }
                 }
@@ -180,29 +210,11 @@ final class OptimizeImages extends Command
             return true;
         });
 
+        // now re-index using the hash as the key
         $map = [];
 
-        foreach ($images as $image) {
-            // make sure we get the mtime and filesize before stripping off a prefix
-            $mtime = trim(shell_exec("stat -c %Y '$image'"));
-            $filesize = trim(shell_exec("du -b '$image' | cut -f1"));
-            $pathinfo = pathinfo($image);
-
-            if ($excludePrefix !== null) {
-                $regex = preg_quote($excludePrefix, '/');
-
-                $image = preg_replace("/^$regex/", '', $image);
-            }
-
-            $hash = md5($image);
-
-            // using the has as the key for easy matching in the future
-            $map[$hash] = array_merge([
-                'filepath' => $image,
-                'filepath_hash' => $hash,
-                'filesize' => $filesize,
-                'mtime' => $mtime,
-            ], $pathinfo); // adding pathinfo to our own fields
+        foreach ($images as $imageInfo) {
+            $map[$imageInfo['source_filepath_hash']] = $imageInfo;
         }
 
         return $map;
