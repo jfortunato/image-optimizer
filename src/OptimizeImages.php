@@ -168,7 +168,7 @@ final class OptimizeImages extends Command
      */
     private function mapImagesInDirectory(string $directory, array $onlyInclude = [], bool $isOutputDirectory = false): array
     {
-        $result = explode(PHP_EOL, trim(shell_exec("find '$directory' -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$' -exec ls -l --time-style=+%s {} +")));
+        $result = explode(PHP_EOL, trim(shell_exec("find '$directory' -type f -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$' -exec ls -l --time-style=+%s {} +")));
 
         // remove empty string on initial run
         $result = array_filter($result);
