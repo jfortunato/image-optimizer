@@ -169,7 +169,7 @@ final class OptimizeImages extends Command
 
         $images = array_map(function (string  $fileInfo) use ($isOutputDirectory) {
             // we want to discard some leading output, and be left with only "filesize mtime filepath"
-            $fileInfo = trim(preg_replace('/^[^\s]+\s[^\s]+\s[^\s]+\s[^\s]+\s/', '', $fileInfo));
+            $fileInfo = trim(preg_replace('/^[^\s]+\s+[^\s]+\s+[^\s]+\s+[^\s]+\s+/', '', $fileInfo));
 
             // break up the value by spaces, then slice off the parts we need
             $parts = explode(' ', $fileInfo);
