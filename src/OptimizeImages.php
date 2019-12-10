@@ -162,18 +162,21 @@ final class OptimizeImages extends Command
      */
     private function mapImagesInDirectory(string $directory, array $onlyInclude = [], bool $isOutputDirectory = false): array
     {
-        $result = explode(PHP_EOL, trim(shell_exec("find $directory -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$' -exec ls -l --time-style=+%s {} +")));
+        $result = explode(PHP_EOL, trim(shell_exec("find '$directory' -iregex '.*\.\(jpg\|gif\|png\|svg\|jpeg\)$' -exec ls -l --time-style=+%s {} +")));
 
         // remove empty string on initial run
         $result = array_filter($result);
 
         $images = array_map(function (string  $fileInfo) use ($isOutputDirectory) {
-            // replace multiple spaces with one space
-            $fileInfo = preg_replace('/\s\s+/', ' ', $fileInfo);
+            // we want to discard some leading output, and be left with only "filesize mtime filepath"
+            $fileInfo = trim(preg_replace('/^[^\s]+\s[^\s]+\s[^\s]+\s[^\s]+\s/', '', $fileInfo));
 
+            // break up the value by spaces, then slice off the parts we need
             $parts = explode(' ', $fileInfo);
 
-            $filepath = $parts[6];
+            $filesize = $parts[0];
+            $mtime = $parts[1];
+            $filepath = implode(' ', array_slice($parts, 2)); // we need to implode in case there were spaces somewhere in the path
 
             $hash = md5($filepath);
 
@@ -188,8 +191,8 @@ final class OptimizeImages extends Command
             return [
                 'source_filepath_hash' => $hash,
                 'filepath' => $filepath,
-                'filesize' => $parts[4],
-                'mtime' => $parts[5],
+                'filesize' => $filesize,
+                'mtime' => $mtime,
             ];
         }, $result);
 
