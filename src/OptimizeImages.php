@@ -106,7 +106,9 @@ final class OptimizeImages extends Command
         mkdir($dir);
 
         foreach ($imagesToOptimize as $imageInfo) {
-            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $imageInfo['extension'];
+            $pathInfo = pathinfo($imageInfo['filepath']);
+
+            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
 
             copy($imageInfo['filepath'], $tempPath);
         }
@@ -116,15 +118,17 @@ final class OptimizeImages extends Command
 
         // now that all the images are optimized, we need to restore their original directory structure/filename and place them in the output directory
         foreach ($imagesToOptimize as $imageInfo) {
-            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $imageInfo['extension'];
+            $pathInfo = pathinfo($imageInfo['filepath']);
 
-            $directory = $outputDirectory . $imageInfo['dirname'];
+            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
+
+            $directory = $outputDirectory . $pathInfo['dirname'];
 
             if (!file_exists($directory)) {
                 mkdir($directory, 0777, true);
             }
 
-            $filename = $directory . '/' . $imageInfo['basename'];
+            $filename = $directory . '/' . $pathInfo['basename'];
 
             rename($tempPath, $filename);
         }
@@ -181,12 +185,12 @@ final class OptimizeImages extends Command
                 $hash = md5(preg_replace("/^$regex/", '', $filepath));
             }
 
-            return array_merge([
+            return [
                 'source_filepath_hash' => $hash,
                 'filepath' => $filepath,
                 'filesize' => $parts[4],
                 'mtime' => $parts[5],
-            ], pathinfo($filepath));
+            ];
         }, $result);
 
         $images = array_filter($images, function (array $imageInfo) use ($onlyInclude) {
