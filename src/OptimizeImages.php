@@ -15,6 +15,8 @@ final class OptimizeImages extends Command
 {
     const NODE_MODULES_BIN = __DIR__ . '/../node_modules/.bin';
 
+    const CHUNK_SIZE = 5000;
+
     /**
      * @var string
      */
@@ -107,39 +109,53 @@ final class OptimizeImages extends Command
 
         $imagesToOptimize = array_merge($newImages, $modifiedImages);
 
+        $chunks = array_chunk($imagesToOptimize, self::CHUNK_SIZE);
+
         // copy all images into a temp directory using the hash as the filename
-        $dir = sys_get_temp_dir() . '/temporary-optimized-images_' . uniqid();
-        mkdir($dir);
+        $parentDir = sys_get_temp_dir() . '/temporary-optimized-images_' . uniqid();
+        mkdir($parentDir);
 
-        foreach ($imagesToOptimize as $imageInfo) {
-            $pathInfo = pathinfo($imageInfo['filepath']);
+        foreach ($chunks as $index => $imagesInChunk) {
+            $dir = $parentDir . "/$index";
 
-            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
+            // make the directory for this chunk
+            mkdir($dir);
 
-            copy($imageInfo['filepath'], $tempPath);
-        }
+            // now loop thru and copy each image in this chunk
+            foreach ($imagesInChunk as $imageInfo) {
+                $pathInfo = pathinfo($imageInfo['filepath']);
 
-        // optimize all images in the directory in place
-        shell_exec("./node_modules/.bin/imagemin --plugin=mozjpeg --plugin=pngquant --plugin=gifsicle --plugin=svgo $dir/* --out-dir=$dir");
+                $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
 
-        // now that all the images are optimized, we need to restore their original directory structure/filename and place them in the output directory
-        foreach ($imagesToOptimize as $imageInfo) {
-            $pathInfo = pathinfo($imageInfo['filepath']);
-
-            $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
-
-            $directory = $this->outputDirectory . $pathInfo['dirname'];
-
-            if (!file_exists($directory)) {
-                mkdir($directory, 0777, true);
+                copy($imageInfo['filepath'], $tempPath);
             }
 
-            $filename = $directory . '/' . $pathInfo['basename'];
+            // optimize all images in this chunk in place
+            shell_exec("./node_modules/.bin/imagemin --plugin=mozjpeg --plugin=pngquant --plugin=gifsicle --plugin=svgo $dir/* --out-dir=$dir");
 
-            rename($tempPath, $filename);
+            // now that all the images are optimized, we need to restore their original directory structure/filename and place them in the output directory
+            foreach ($imagesInChunk as $imageInfo) {
+                $pathInfo = pathinfo($imageInfo['filepath']);
+
+                $tempPath = $dir . '/' . $imageInfo['source_filepath_hash'] . '.' . $pathInfo['extension'];
+
+                $directory = $this->outputDirectory . $pathInfo['dirname'];
+
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0777, true);
+                }
+
+                $filename = $directory . '/' . $pathInfo['basename'];
+
+                rename($tempPath, $filename);
+            }
+
+            // all images optimized and placed in the output directory, remove the current chunk directory
+            rmdir($dir);
         }
 
-        rmdir($dir);
+        // all chunks processed, remove the parent directory
+        rmdir($parentDir);
 
 
         if ($input->getOption('no-delete') === false) {
