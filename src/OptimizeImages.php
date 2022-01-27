@@ -189,7 +189,9 @@ final class OptimizeImages extends Command
         // remove empty string on initial run
         $result = array_filter($result);
 
-        $images = array_map(function (string  $fileInfo) use ($isOutputDirectory) {
+        $map = [];
+
+        foreach ($result as $fileInfo) {
             // we want to discard some leading output, and be left with only "filesize mtime filepath"
             $fileInfo = trim(preg_replace('/^[^\s]+\s+[^\s]+\s+[^\s]+\s+[^\s]+\s+/', '', $fileInfo));
 
@@ -210,40 +212,29 @@ final class OptimizeImages extends Command
                 $hash = md5(preg_replace("/^$regex/", '', $filepath));
             }
 
-            return [
-                'source_filepath_hash' => $hash,
-                'filepath' => $filepath,
-                'filesize' => $filesize,
-                'mtime' => $mtime,
-            ];
-        }, $result);
-
-        $images = array_filter($images, function (array $imageInfo) use ($onlyInclude) {
-
             // if the user specified to only include certain files, don't include any filepath
             // that does not contain the search string
             if (!empty($onlyInclude)) {
                 $found = false;
 
                 foreach ($onlyInclude as $item) {
-                    if (strpos($imageInfo['filepath'], $item) !== false) {
+                    if (strpos($filepath, $item) !== false) {
                         $found = true;
                     }
                 }
 
                 if (!$found) {
-                    return false;
+                    // continue, so it doesn't get added to the $map
+                    continue;
                 }
             }
 
-            return true;
-        });
-
-        // now re-index using the hash as the key
-        $map = [];
-
-        foreach ($images as $imageInfo) {
-            $map[$imageInfo['source_filepath_hash']] = $imageInfo;
+            $map[$hash] = [
+                'source_filepath_hash' => $hash,
+                'filepath' => $filepath,
+                'filesize' => $filesize,
+                'mtime' => $mtime,
+            ];
         }
 
         return $map;
